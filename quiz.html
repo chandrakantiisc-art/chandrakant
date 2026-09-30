@@ -152,6 +152,100 @@ const QUESTIONS = [
     options: ["Oxygen ions", "Hydrogen ions (H⁺)", "Chloride ions", "Hydroxide ions"],
     answer: 1,
     explanation: "All acids produce H⁺ ions in aqueous solution (and all bases produce OH⁻ ions). H⁺ is responsible for acidic properties such as reacting with metals to release hydrogen."
+  },
+  {
+    text: "Which gas turns lime water milky?",
+    options: ["Hydrogen", "Oxygen", "Carbon dioxide", "Nitrogen"],
+    answer: 2,
+    explanation: "CO₂ reacts with lime water: Ca(OH)₂ + CO₂ → CaCO₃ + H₂O. The insoluble white CaCO₃ makes the water milky. Passing excess CO₂ turns it clear again as soluble calcium hydrogencarbonate forms."
+  },
+  {
+    text: "What are the products when a metal carbonate reacts with an acid?",
+    options: [
+      "Salt + hydrogen",
+      "Salt + water",
+      "Salt + water + carbon dioxide",
+      "Base + carbon dioxide"
+    ],
+    answer: 2,
+    explanation: "Metal carbonate + Acid → Salt + CO₂ + H₂O, e.g. Na₂CO₃ + 2HCl → 2NaCl + H₂O + CO₂."
+  },
+  {
+    text: "What is the general result of an acid reacting with a base?",
+    options: [
+      "Hydrogen gas is released",
+      "Salt and water are formed (neutralisation)",
+      "Only a salt is formed",
+      "Carbon dioxide is released"
+    ],
+    answer: 1,
+    explanation: "Base + Acid → Salt + Water, e.g. NaOH + HCl → NaCl + H₂O. The effect of the base is cancelled by the acid and vice versa, so this is called a neutralisation reaction."
+  },
+  {
+    text: "What happens to blue litmus paper when dipped in an acid?",
+    options: ["Stays blue", "Turns red", "Turns green", "Becomes colourless"],
+    answer: 1,
+    explanation: "Acids turn blue litmus red. Bases turn red litmus blue. Litmus is a natural indicator extracted from lichen."
+  },
+  {
+    text: "Look at the pH scale below. Which solution is most likely a strong base?",
+    image: `<svg viewBox="0 0 330 70" width="340" role="img" aria-label="pH scale 0 to 14 from red to blue">
+      <defs><linearGradient id="ph" x1="0" x2="1">
+        <stop offset="0" stop-color="#ef4444"/><stop offset=".25" stop-color="#f59e0b"/>
+        <stop offset=".5" stop-color="#22c55e"/><stop offset=".75" stop-color="#3b82f6"/><stop offset="1" stop-color="#6d28d9"/>
+      </linearGradient></defs>
+      <rect x="10" y="10" width="310" height="26" fill="url(#ph)" rx="4"/>
+      <text x="10" y="56" font-size="11" fill="#111">0 acidic</text><text x="145" y="56" font-size="11" fill="#111">7 neutral</text><text x="255" y="56" font-size="11" fill="#111">14 basic</text></svg>`,
+    options: ["Lemon juice, pH 2", "Pure water, pH 7", "Blood, pH 7.4", "Sodium hydroxide, pH 14"],
+    answer: 3,
+    explanation: "pH below 7 is acidic, 7 is neutral, above 7 is basic. The higher the pH, the stronger the base, so NaOH at pH 14 is a strong base.",
+    chart: {
+      type: "bar",
+      data: { labels: ["Lemon juice", "Milk", "Pure water", "Baking soda", "NaOH"],
+              datasets: [{ label: "Typical pH", data: [2, 6.5, 7, 8.3, 14],
+                           backgroundColor: ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#6d28d9"] }] },
+      options: { scales: { y: { min: 0, max: 14 } } }
+    }
+  },
+  {
+    text: "Which ion do all bases produce in aqueous solution?",
+    options: ["H⁺", "Cl⁻", "OH⁻", "Na⁺"],
+    answer: 2,
+    explanation: "Bases release hydroxide ions (OH⁻) in water, just as acids release H⁺. A base that dissolves in water is called an alkali."
+  },
+  {
+    text: "Why does a glucose solution NOT make the bulb glow in Activity 2.8, even though glucose contains hydrogen?",
+    options: [
+      "Glucose is too thick",
+      "Glucose does not produce H⁺ ions in solution, so it does not conduct electricity",
+      "Glucose is a strong acid",
+      "The battery is too weak"
+    ],
+    answer: 1,
+    explanation: "Containing hydrogen is not enough. A compound is acidic only if it releases H⁺ ions in water. Glucose and alcohol stay as molecules, so no ions carry the current."
+  },
+  {
+    text: "Which reaction is used to test for hydrogen gas?",
+    options: [
+      "It turns lime water milky",
+      "It relights a glowing splinter",
+      "It burns with a pop sound near a burning candle",
+      "It turns blue litmus red"
+    ],
+    answer: 2,
+    explanation: "Hydrogen is combustible and burns with a characteristic 'pop' sound. CO₂ turns lime water milky and extinguishes the flame; oxygen relights a glowing splinter."
+  },
+  {
+    text: "A solution turns phenolphthalein pink. The solution is…",
+    options: ["Acidic", "Basic", "Neutral", "Cannot be said"],
+    answer: 1,
+    explanation: "Phenolphthalein is colourless in acidic and neutral solutions but turns pink in basic solutions. Methyl orange is the opposite choice: red in acids, yellow in bases."
+  },
+  {
+    text: "Balance the equation: Zn + HCl → ZnCl₂ + H₂. How many HCl molecules are needed?",
+    options: ["1", "2", "3", "4"],
+    answer: 1,
+    explanation: "Zn + 2HCl → ZnCl₂ + H₂. There are 2 Cl atoms and 2 H atoms on the right, so 2 HCl are needed on the left."
   }
 ];
 
