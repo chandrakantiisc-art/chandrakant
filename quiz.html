@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interactive Quiz Practice</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --primary:#4f46e5;
+          --ok:#16a34a; --bad:#dc2626; --okbg:#dcfce7; --badbg:#fee2e2; --border:#e5e7eb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e5e7eb; --muted:#94a3b8; --primary:#818cf8;
+            --okbg:#14532d; --badbg:#7f1d1d; --border:#334155; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:720px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.4rem; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
+  .bar { height:8px; background:var(--border); border-radius:4px; overflow:hidden; margin:8px 0 16px; }
+  .bar > div { height:100%; background:var(--primary); width:0; transition:width .3s; }
+  .meta { color:var(--muted); font-size:.85rem; display:flex; justify-content:space-between; }
+  .q { font-size:1.15rem; font-weight:600; margin:8px 0 14px; }
+  .qimg { display:block; max-width:100%; margin:0 auto 14px; border-radius:8px; background:#fff; }
+  .opt { display:block; width:100%; text-align:left; padding:12px 14px; margin:8px 0; font:inherit; color:inherit;
+         background:var(--card); border:2px solid var(--border); border-radius:8px; cursor:pointer; }
+  .opt:hover:not(:disabled) { border-color:var(--primary); }
+  .opt.correct { background:var(--okbg); border-color:var(--ok); }
+  .opt.wrong { background:var(--badbg); border-color:var(--bad); }
+  .opt:disabled { cursor:default; }
+  .explain { margin-top:14px; padding:14px; border-left:4px solid var(--primary); background:var(--bg); border-radius:6px; }
+  .explain h3 { margin:0 0 6px; font-size:1rem; }
+  .chartbox { position:relative; height:240px; margin-top:12px; }
+  button.primary { background:var(--primary); color:#fff; border:0; padding:10px 20px; border-radius:8px; font:inherit; cursor:pointer; margin-top:14px; }
+  button.primary:disabled { opacity:.4; cursor:default; }
+  .hidden { display:none; }
+  .score { font-size:2.4rem; font-weight:700; text-align:center; }
+  ul.review { padding-left:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🧠 Interactive Quiz Practice</h1>
+
+  <div id="quiz" class="card">
+    <div class="meta"><span id="progressText"></span><span id="scoreText"></span></div>
+    <div class="bar"><div id="progressBar"></div></div>
+    <div id="question" class="q"></div>
+    <div id="qimage"></div>
+    <div id="options"></div>
+    <div id="explain" class="explain hidden"></div>
+    <button id="next" class="primary hidden">Next →</button>
+  </div>
+
+  <div id="results" class="card hidden">
+    <div class="score" id="finalScore"></div>
+    <p id="finalMsg" style="text-align:center;color:var(--muted)"></p>
+    <div class="chartbox"><canvas id="resultChart"></canvas></div>
+    <h3>Review</h3>
+    <ul class="review" id="review"></ul>
+    <button class="primary" id="restart">Practice again</button>
+  </div>
+</main>
+
+<script>
+// ---------- Question bank: edit/add your own ----------
+// image: inline SVG string (or any URL). chart: optional Chart.js config shown in the explanation.
+const QUESTIONS = [
+  {
+    text: "What is the area of the rectangle shown?",
+    image: `<svg viewBox="0 0 240 140" width="240" role="img" aria-label="Rectangle 8 by 5">
+      <rect x="30" y="20" width="160" height="100" fill="#c7d2fe" stroke="#4f46e5" stroke-width="3"/>
+      <text x="110" y="14" text-anchor="middle" font-size="14" fill="#111">8 cm</text>
+      <text x="205" y="75" font-size="14" fill="#111">5 cm</text></svg>`,
+    options: ["13 cm²", "26 cm²", "40 cm²", "45 cm²"],
+    answer: 2,
+    explanation: "Area of a rectangle = length × width = 8 × 5 = 40 cm². 26 is the perimeter (2 × (8+5)), a common mix-up."
+  },
+  {
+    text: "Which planet has the largest diameter?",
+    options: ["Earth", "Saturn", "Jupiter", "Neptune"],
+    answer: 2,
+    explanation: "Jupiter is the largest planet in the Solar System (~139,820 km across). The chart compares diameters.",
+    chart: {
+      type: "bar",
+      data: { labels: ["Earth", "Neptune", "Saturn", "Jupiter"],
+              datasets: [{ label: "Diameter (thousand km)", data: [12.7, 49.2, 116.5, 139.8],
+                           backgroundColor: ["#60a5fa", "#818cf8", "#fbbf24", "#f97316"] }] }
+    }
+  },
+  {
+    text: "In the pie chart, which category has the biggest share of Earth's atmosphere?",
+    options: ["Oxygen", "Nitrogen", "Argon", "Carbon dioxide"],
+    answer: 1,
+    explanation: "Nitrogen makes up ~78% of dry air; oxygen ~21%; argon ~0.9%; the rest is trace gases.",
+    chart: {
+      type: "pie",
+      data: { labels: ["Nitrogen", "Oxygen", "Argon & others"],
+              datasets: [{ data: [78, 21, 1], backgroundColor: ["#4f46e5", "#16a34a", "#f59e0b"] }] }
+    }
+  },
+  {
+    text: "The line chart shows a function. Which is it?",
+    image: `<svg viewBox="0 0 220 160" width="220" role="img" aria-label="Parabola">
+      <line x1="10" y1="140" x2="210" y2="140" stroke="#888"/><line x1="110" y1="10" x2="110" y2="150" stroke="#888"/>
+      <path d="M30 20 Q110 260 190 20" fill="none" stroke="#4f46e5" stroke-width="3"/></svg>`,
+    options: ["y = 2x", "y = x²", "y = 1/x", "y = √x"],
+    answer: 1,
+    explanation: "A U-shaped curve symmetric about the y-axis is a parabola: y = x². Values grow quadratically as |x| increases.",
+    chart: {
+      type: "line",
+      data: { labels: [-3, -2, -1, 0, 1, 2, 3],
+              datasets: [{ label: "y = x²", data: [9, 4, 1, 0, 1, 4, 9], borderColor: "#4f46e5", tension: .3 }] }
+    }
+  }
+];
+
+// ---------- Quiz logic ----------
+const $ = id => document.getElementById(id);
+let idx, score, answers, chartInst, resultInst;
+
+function start() {
+  idx = 0; score = 0; answers = [];
+  $("results").classList.add("hidden");
+  $("quiz").classList.remove("hidden");
+  show();
+}
+
+function show() {
+  const q = QUESTIONS[idx];
+  $("progressText").textContent = `Question ${idx + 1} of ${QUESTIONS.length}`;
+  $("scoreText").textContent = `Score: ${score}`;
+  $("progressBar").style.width = (idx / QUESTIONS.length * 100) + "%";
+  $("question").textContent = q.text;
+  $("qimage").innerHTML = q.image ? `<div class="qimg">${imgHtml(q.image)}</div>` : "";
+  $("explain").classList.add("hidden");
+  $("next").classList.add("hidden");
+  $("next").textContent = idx === QUESTIONS.length - 1 ? "See results" : "Next →";
+  const box = $("options"); box.innerHTML = "";
+  q.options.forEach((o, i) => {
+    const b = document.createElement("button");
+    b.className = "opt"; b.textContent = o;
+    b.onclick = () => choose(i);
+    box.appendChild(b);
+  });
+}
+
+function imgHtml(src) {
+  return src.trim().startsWith("<svg") ? src : `<img class="qimg" src="${src}" alt="">`;
+}
+
+function choose(i) {
+  const q = QUESTIONS[idx];
+  const right = i === q.answer;
+  if (right) score++;
+  answers.push(right);
+  [...$("options").children].forEach((b, n) => {
+    b.disabled = true;
+    if (n === q.answer) b.classList.add("correct");
+    else if (n === i) b.classList.add("wrong");
+  });
+  $("scoreText").textContent = `Score: ${score}`;
+  const ex = $("explain");
+  ex.innerHTML = `<h3>${right ? "✅ Correct!" : "❌ Not quite."}</h3><div></div>` +
+                 (q.chart ? `<div class="chartbox"><canvas id="expChart"></canvas></div>` : "");
+  ex.firstElementChild.nextElementSibling.textContent = q.explanation;
+  ex.classList.remove("hidden");
+  if (chartInst) chartInst.destroy();
+  if (q.chart && window.Chart) {
+    const cfg = structuredClone(q.chart);
+    cfg.options = { responsive: true, maintainAspectRatio: false, ...(cfg.options || {}) };
+    chartInst = new Chart($("expChart"), cfg);
+  }
+  $("next").classList.remove("hidden");
+}
+
+$("next").onclick = () => {
+  if (++idx < QUESTIONS.length) show(); else finish();
+};
+
+function finish() {
+  $("quiz").classList.add("hidden");
+  $("results").classList.remove("hidden");
+  const pct = Math.round(score / QUESTIONS.length * 100);
+  $("finalScore").textContent = `${score} / ${QUESTIONS.length} (${pct}%)`;
+  $("finalMsg").textContent = pct >= 80 ? "Excellent work!" : pct >= 50 ? "Good effort — review and retry." : "Keep practicing!";
+  $("review").innerHTML = QUESTIONS.map((q, i) =>
+    `<li>${answers[i] ? "✅" : "❌"} ${q.text} <br><small style="color:var(--muted)">Answer: ${q.options[q.answer]}</small></li>`).join("");
+  if (resultInst) resultInst.destroy();
+  if (window.Chart) {
+    resultInst = new Chart($("resultChart"), {
+      type: "doughnut",
+      data: { labels: ["Correct", "Incorrect"],
+              datasets: [{ data: [score, QUESTIONS.length - score], backgroundColor: ["#16a34a", "#dc2626"] }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+}
+
+$("restart").onclick = start;
+start();
+</script>
+</body>
+</html>
