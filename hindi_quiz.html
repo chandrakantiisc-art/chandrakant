@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>अनुवाद क्विज़ – हिन्दी व्याकरण</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --primary:#4f46e5;
+          --ok:#16a34a; --bad:#dc2626; --okbg:#dcfce7; --badbg:#fee2e2; --border:#e5e7eb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f172a; --card:#1e293b; --text:#e5e7eb; --muted:#94a3b8; --primary:#818cf8;
+            --okbg:#14532d; --badbg:#7f1d1d; --border:#334155; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Noto Sans Devanagari",system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  main { max-width:720px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.4rem; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
+  .bar { height:8px; background:var(--border); border-radius:4px; overflow:hidden; margin:8px 0 16px; }
+  .bar > div { height:100%; background:var(--primary); width:0; transition:width .3s; }
+  .meta { color:var(--muted); font-size:.85rem; display:flex; justify-content:space-between; }
+  .q { font-size:1.15rem; font-weight:600; margin:8px 0 14px; }
+  .qimg { display:block; max-width:100%; margin:0 auto 14px; }
+  .qimg svg { max-width:100%; height:auto; background:#fff; border-radius:8px; }
+  .opt { display:block; width:100%; text-align:left; padding:12px 14px; margin:8px 0; font:inherit; color:inherit;
+         background:var(--card); border:2px solid var(--border); border-radius:8px; cursor:pointer; }
+  .opt:hover:not(:disabled) { border-color:var(--primary); }
+  .opt.correct { background:var(--okbg); border-color:var(--ok); }
+  .opt.wrong { background:var(--badbg); border-color:var(--bad); }
+  .opt:disabled { cursor:default; }
+  .explain { margin-top:14px; padding:14px; border-left:4px solid var(--primary); background:var(--bg); border-radius:6px; }
+  .explain h3 { margin:0 0 6px; font-size:1rem; }
+  .chartbox { position:relative; height:240px; margin-top:12px; }
+  button.primary { background:var(--primary); color:#fff; border:0; padding:10px 20px; border-radius:8px; font:inherit; cursor:pointer; margin-top:14px; }
+  .hidden { display:none; }
+  .score { font-size:2.4rem; font-weight:700; text-align:center; }
+  ul.review { padding-left:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>📘 अनुवाद क्विज़ <small style="font-weight:400;color:var(--muted)">(हिन्दी का सम्पूर्ण व्याकरण, पृ. 78)</small></h1>
+
+  <div id="quiz" class="card">
+    <div class="meta"><span id="progressText"></span><span id="scoreText"></span></div>
+    <div class="bar"><div id="progressBar"></div></div>
+    <div id="question" class="q"></div>
+    <div id="qimage"></div>
+    <div id="options"></div>
+    <div id="explain" class="explain hidden"></div>
+    <button id="next" class="primary hidden">अगला →</button>
+  </div>
+
+  <div id="results" class="card hidden">
+    <div class="score" id="finalScore"></div>
+    <p id="finalMsg" style="text-align:center;color:var(--muted)"></p>
+    <div class="chartbox"><canvas id="resultChart"></canvas></div>
+    <h3>समीक्षा</h3>
+    <ul class="review" id="review"></ul>
+    <button class="primary" id="restart">फिर से अभ्यास करें</button>
+  </div>
+</main>
+
+<script>
+const BRIDGE_SVG = `<svg viewBox="0 0 420 130" width="440" role="img" aria-label="संस्कृत से अंग्रेज़ी और फिर स्पेनिश">
+  <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#374151"/></marker></defs>
+  <rect x="10" y="40" width="100" height="44" rx="8" fill="#c7d2fe" stroke="#4f46e5" stroke-width="2"/>
+  <text x="60" y="68" text-anchor="middle" font-size="15" fill="#111">संस्कृत</text>
+  <text x="60" y="30" text-anchor="middle" font-size="12" fill="#374151">स्रोत भाषा</text>
+  <rect x="160" y="40" width="100" height="44" rx="8" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
+  <text x="210" y="68" text-anchor="middle" font-size="15" fill="#111">अंग्रेज़ी</text>
+  <text x="210" y="30" text-anchor="middle" font-size="12" fill="#374151">सेतु भाषा</text>
+  <rect x="310" y="40" width="100" height="44" rx="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="2"/>
+  <text x="360" y="68" text-anchor="middle" font-size="15" fill="#111">स्पेनिश</text>
+  <text x="360" y="30" text-anchor="middle" font-size="12" fill="#374151">लक्ष्य भाषा</text>
+  <line x1="112" y1="62" x2="158" y2="62" stroke="#374151" stroke-width="2" marker-end="url(#ar)"/>
+  <line x1="262" y1="62" x2="308" y2="62" stroke="#374151" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="210" y="112" text-anchor="middle" font-size="12" fill="#374151">'रामायण' का अनुवाद</text></svg>`;
+
+const QUESTIONS = [
+  {
+    text: "संस्कृत महाकाव्य 'रामायण' का अंग्रेज़ी में अनुवाद किया जाए, तो 'स्रोत भाषा' कौन-सी होगी?",
+    options: ["अंग्रेज़ी", "संस्कृत", "स्पेनिश", "हिन्दी"],
+    answer: 1,
+    explanation: "जिस भाषा के मूल पाठ का अनुवाद किया जाता है, उसे 'स्रोत भाषा' कहते हैं। यहाँ मूल पाठ संस्कृत में है, इसलिए स्रोत भाषा संस्कृत और लक्ष्य भाषा अंग्रेज़ी होगी।"
+  },
+  {
+    text: "अंग्रेज़ी में अनूदित 'रामायण' का अंग्रेज़ी से स्पेनिश में अनुवाद किया जाए, तो अंग्रेज़ी क्या कहलाएगी?",
+    image: BRIDGE_SVG,
+    options: ["स्रोत भाषा", "लक्ष्य भाषा", "सेतु भाषा", "मातृभाषा"],
+    answer: 2,
+    explanation: "जब अनूदित पाठ का फिर किसी अन्य भाषा में अनुवाद होता है, तो स्रोत और लक्ष्य भाषा के बीच आने वाली भाषा 'सेतु भाषा' कहलाती है। यहाँ अंग्रेज़ी संस्कृत और स्पेनिश के बीच सेतु का काम कर रही है। ऐसे अनुवाद वस्तुतः 'अनुवाद के अनुवाद' होते हैं।",
+    chart: {
+      type: "bar",
+      data: { labels: ["सीधा अनुवाद", "सेतु भाषा के साथ"],
+              datasets: [{ label: "शामिल भाषाओं की संख्या", data: [2, 3], backgroundColor: ["#4f46e5", "#d97706"] }] },
+      options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    }
+  },
+  {
+    text: "अनुवाद में स्रोत भाषा और लक्ष्य भाषा के जोड़े को क्या कहा जाता है?",
+    options: ["सेतु युग्म", "भाषिक युग्म", "शब्द युग्म", "अनुवाद युग्म"],
+    answer: 1,
+    explanation: "अनुवाद हमेशा दो भाषाओं — स्रोत भाषा और लक्ष्य भाषा — के बीच सम्पन्न होता है। इन दोनों भाषाओं को 'भाषिक युग्म' कहा जाता है।"
+  },
+  {
+    text: "हिन्दी से अंग्रेज़ी में अनुवाद करते समय 'भाषिक युग्म' कौन-सा होगा?",
+    options: ["केवल हिन्दी", "केवल अंग्रेज़ी", "हिन्दी और अंग्रेज़ी", "हिन्दी, अंग्रेज़ी और संस्कृत"],
+    answer: 2,
+    explanation: "भाषिक युग्म में स्रोत और लक्ष्य दोनों भाषाएँ आती हैं। हिन्दी से अंग्रेज़ी में (या अंग्रेज़ी से हिन्दी में) अनुवाद हो, तो हिन्दी और अंग्रेज़ी दोनों मिलकर भाषिक युग्म बनाती हैं।"
+  },
+  {
+    text: "अनुवाद के संदर्भ में सेतु भाषा का महत्व स्रोत और लक्ष्य भाषा से भी अधिक क्यों माना गया है?",
+    options: [
+      "क्योंकि सेतु भाषा सबसे पुरानी होती है",
+      "क्योंकि वैश्वीकरण के युग में सभी अनुवादकों का स्रोत भाषा में पारंगत होना असंभव है",
+      "क्योंकि सेतु भाषा में अनुवाद कभी गलत नहीं होता",
+      "क्योंकि लक्ष्य भाषा हमेशा सेतु भाषा ही होती है"
+    ],
+    answer: 1,
+    explanation: "वैश्वीकरण के इस युग में सभी अनुवादकों का स्रोत भाषा में पारंगत होना संभव नहीं है, इसीलिए वे सेतु भाषा (जैसे अंग्रेज़ी) का उपयोग अधिक करते हैं।"
+  }
+];
+
+// ---------- Quiz logic ----------
+const $ = id => document.getElementById(id);
+let idx, score, answers, chartInst, resultInst;
+
+function start() {
+  idx = 0; score = 0; answers = [];
+  $("results").classList.add("hidden");
+  $("quiz").classList.remove("hidden");
+  show();
+}
+
+function show() {
+  const q = QUESTIONS[idx];
+  $("progressText").textContent = `प्रश्न ${idx + 1} / ${QUESTIONS.length}`;
+  $("scoreText").textContent = `अंक: ${score}`;
+  $("progressBar").style.width = (idx / QUESTIONS.length * 100) + "%";
+  $("question").textContent = q.text;
+  $("qimage").innerHTML = q.image ? `<div class="qimg">${imgHtml(q.image)}</div>` : "";
+  $("explain").classList.add("hidden");
+  $("next").classList.add("hidden");
+  $("next").textContent = idx === QUESTIONS.length - 1 ? "परिणाम देखें" : "अगला →";
+  const box = $("options"); box.innerHTML = "";
+  q.options.forEach((o, i) => {
+    const b = document.createElement("button");
+    b.className = "opt"; b.textContent = o;
+    b.onclick = () => choose(i);
+    box.appendChild(b);
+  });
+}
+
+function imgHtml(src) {
+  return src.trim().startsWith("<svg") ? src : `<img class="qimg" src="${src}" alt="">`;
+}
+
+function choose(i) {
+  const q = QUESTIONS[idx];
+  const right = i === q.answer;
+  if (right) score++;
+  answers.push(right);
+  [...$("options").children].forEach((b, n) => {
+    b.disabled = true;
+    if (n === q.answer) b.classList.add("correct");
+    else if (n === i) b.classList.add("wrong");
+  });
+  $("scoreText").textContent = `अंक: ${score}`;
+  const ex = $("explain");
+  ex.innerHTML = `<h3>${right ? "✅ सही उत्तर!" : "❌ गलत उत्तर।"}</h3><div></div>` +
+                 (q.chart ? `<div class="chartbox"><canvas id="expChart"></canvas></div>` : "");
+  ex.firstElementChild.nextElementSibling.textContent = q.explanation;
+  ex.classList.remove("hidden");
+  if (chartInst) chartInst.destroy();
+  if (q.chart && window.Chart) {
+    const cfg = structuredClone(q.chart);
+    cfg.options = { responsive: true, maintainAspectRatio: false, ...(cfg.options || {}) };
+    chartInst = new Chart($("expChart"), cfg);
+  }
+  $("next").classList.remove("hidden");
+}
+
+$("next").onclick = () => {
+  if (++idx < QUESTIONS.length) show(); else finish();
+};
+
+function finish() {
+  $("quiz").classList.add("hidden");
+  $("results").classList.remove("hidden");
+  const pct = Math.round(score / QUESTIONS.length * 100);
+  $("finalScore").textContent = `${score} / ${QUESTIONS.length} (${pct}%)`;
+  $("finalMsg").textContent = pct >= 80 ? "बहुत बढ़िया!" : pct >= 50 ? "अच्छा प्रयास — दोबारा अभ्यास करें।" : "अभ्यास जारी रखें!";
+  $("review").innerHTML = QUESTIONS.map((q, i) =>
+    `<li>${answers[i] ? "✅" : "❌"} ${q.text} <br><small style="color:var(--muted)">उत्तर: ${q.options[q.answer]}</small></li>`).join("");
+  if (resultInst) resultInst.destroy();
+  if (window.Chart) {
+    resultInst = new Chart($("resultChart"), {
+      type: "doughnut",
+      data: { labels: ["सही", "गलत"],
+              datasets: [{ data: [score, QUESTIONS.length - score], backgroundColor: ["#16a34a", "#dc2626"] }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+}
+
+$("restart").onclick = start;
+start();
+</script>
+</body>
+</html>
